@@ -1,11 +1,18 @@
 import 'organization.dart';
 
+enum TaskStatus {
+  toDo,
+  inProgress,
+  done,
+}
+
 class Task {
   final String id;
   final String titulo;
   final DateTime fechaInicio;
   final DateTime fechaFin;
   final List<OrganizationUser> usuarios;
+  final TaskStatus status;
 
   Task({
     required this.id,
@@ -13,6 +20,7 @@ class Task {
     required this.fechaInicio,
     required this.fechaFin,
     required this.usuarios,
+    this.status = TaskStatus.toDo,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -29,6 +37,25 @@ class Task {
               ?.map((dynamic u) => OrganizationUser.fromJson(u))
               .toList() ??
           [],
+      status: _parseStatus(json['status'] ?? json['estado']),
+    );
+  }
+
+  Task copyWith({
+    String? id,
+    String? titulo,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    List<OrganizationUser>? usuarios,
+    TaskStatus? status,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      titulo: titulo ?? this.titulo,
+      fechaInicio: fechaInicio ?? this.fechaInicio,
+      fechaFin: fechaFin ?? this.fechaFin,
+      usuarios: usuarios ?? this.usuarios,
+      status: status ?? this.status,
     );
   }
 
@@ -40,5 +67,27 @@ class Task {
       }
     }
     throw FormatException('Fecha inválida en Task: $value');
+  }
+
+  static TaskStatus _parseStatus(dynamic value) {
+    if (value == null) {
+      return TaskStatus.toDo;
+    }
+
+    if (value is String) {
+      switch (value.toLowerCase()) {
+        case 'to_do':
+        case 'todo':
+          return TaskStatus.toDo;
+        case 'in_progress':
+        case 'inprogress':
+          return TaskStatus.inProgress;
+        case 'done':
+          return TaskStatus.done;
+        default:
+          return TaskStatus.toDo;
+      }
+    }
+    return TaskStatus.toDo;
   }
 }

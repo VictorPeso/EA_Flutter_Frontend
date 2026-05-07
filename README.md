@@ -12,8 +12,7 @@ Puedes encontrar el backend en: https://github.com/VictorPeso/EA_Flutter_Backend
 
 Con el fin de entender al máximo el funcionamiento de React Native he priorizado usar el minimo de IA Generativa posible. Limitando su uso a los tres casos contretos:
 
-1. **Autocompletado [GitHub Copilot]**: Uso del autocompletado de Visual Studio Code con el fin de escribir mas rápido o para saber bien bien como se introduce ciertos formatos de datos (p.e. el enum
-   dentro del modelo).
+1. **Autocompletado [GitHub Copilot]**: Uso del autocompletado de Visual Studio Code con el fin de escribir mas rápido o para saber bien bien como se introduce ciertos formatos de datos.
 2. **Lectura de codigo [ChatGPT]**: Explicaciones más detalladas y claras sobre algunos log de errores obtenidos y partes del codigo.
 
 El uso de IA ha sido evitado para cualquier otra situación.

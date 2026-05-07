@@ -17,7 +17,11 @@ class OrganizationDetailScreen extends StatefulWidget {
 
 class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
   final OrganizationService _organizationService = OrganizationService();
+
   late Future<List<Task>> _tasksFuture;
+
+  List<Task> _localTasks = [];
+  bool _localTasksInitialized = false;
 
   @override
   void initState() {
@@ -29,6 +33,8 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
 
   void _reloadTasks() {
     setState(() {
+      _localTasks = [];
+      _localTasksInitialized = false;
       _tasksFuture = _organizationService.fetchTasksByOrganization(
         widget.organization.id,
       );
@@ -39,13 +45,154 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
     final String day = date.day.toString().padLeft(2, '0');
     final String month = date.month.toString().padLeft(2, '0');
     final String year = date.year.toString();
+
     return '$day/$month/$year';
+  }
+
+  String _statusLabel(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.toDo:
+        return 'To do';
+      case TaskStatus.inProgress:
+        return 'In progress';
+      case TaskStatus.done:
+        return 'Completed';
+    }
+  }
+
+  void _moveTaskTo(Task task, TaskStatus newStatus) {
+    setState(() {
+      _localTasks = _localTasks.map((Task currentTask) {
+        if (currentTask.id == task.id) {
+          return currentTask.copyWith(status: newStatus);
+        }
+
+        return currentTask;
+      }).toList();
+    });
+  }
+
+  Widget _buildTaskColumn({
+    required String title,
+    required List<Task> tasks,
+  }) {
+    return SizedBox(
+      width: 320,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
+                Chip(
+                  label: Text('${tasks.length}'),
+                  backgroundColor: Colors.blueAccent.withOpacity(0.1),
+                  labelStyle: const TextStyle(
+                    color: Colors.blueAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: tasks.isEmpty
+                ? const Center(
+                    child: Text('Sin tareas'),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    itemCount: tasks.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final Task task = tasks[index];
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: ListTile(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    TaskDetailScreen(task: task),
+                              ),
+                            );
+                          },
+                          leading: const Icon(Icons.task_alt),
+                          title: Text(
+                            task.titulo,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Inicio: ${_formatDate(task.fechaInicio)}',
+                              ),
+                              Text(
+                                'Fin: ${_formatDate(task.fechaFin)}',
+                              ),
+                              const SizedBox(height: 8),
+                              PopupMenuButton<TaskStatus>(
+                                onSelected: (TaskStatus newStatus) {
+                                  _moveTaskTo(task, newStatus);
+                                },
+                                itemBuilder: (BuildContext context) {
+                                  return TaskStatus.values
+                                      .where(
+                                        (TaskStatus status) =>
+                                            status != task.status,
+                                      )
+                                      .map(
+                                        (TaskStatus status) =>
+                                            PopupMenuItem<TaskStatus>(
+                                          value: status,
+                                          child: Text(
+                                            _statusLabel(status),
+                                          ),
+                                        ),
+                                      )
+                                      .toList();
+                                },
+                                child: const Text(
+                                  'Mover a',
+                                  style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          isThreeLine: true,
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Light premium background
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(widget.organization.name),
         centerTitle: true,
@@ -77,7 +224,11 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
                 const CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.blueAccent,
-                  child: Icon(Icons.business, size: 30, color: Colors.white),
+                  child: Icon(
+                    Icons.business,
+                    size: 30,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -95,7 +246,10 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'ID: ${widget.organization.id}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -107,7 +261,10 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
           Expanded(
             child: FutureBuilder<List<Task>>(
               future: _tasksFuture,
-              builder: (BuildContext context, AsyncSnapshot<List<Task>> snapshot) {
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<Task>> snapshot,
+              ) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -124,7 +281,28 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
                   );
                 }
 
-                final List<Task> tasks = snapshot.data ?? <Task>[];
+                final List<Task> fetchedTasks = snapshot.data ?? <Task>[];
+
+                if (!_localTasksInitialized) {
+                  _localTasks = fetchedTasks;
+                  _localTasksInitialized = true;
+                }
+
+                final List<Task> tasks = _localTasks;
+
+                final List<Task> toDoTasks = tasks
+                    .where((Task task) => task.status == TaskStatus.toDo)
+                    .toList();
+
+                final List<Task> inProgressTasks = tasks
+                    .where(
+                      (Task task) => task.status == TaskStatus.inProgress,
+                    )
+                    .toList();
+
+                final List<Task> completedTasks = tasks
+                    .where((Task task) => task.status == TaskStatus.done)
+                    .toList();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +322,8 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
                           ),
                           Chip(
                             label: Text('${tasks.length} activas'),
-                            backgroundColor: Colors.blueAccent.withOpacity(0.1),
+                            backgroundColor:
+                                Colors.blueAccent.withOpacity(0.1),
                             labelStyle: const TextStyle(
                               color: Colors.blueAccent,
                               fontWeight: FontWeight.bold,
@@ -157,41 +336,31 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
                     Expanded(
                       child: tasks.isEmpty
                           ? const Center(
-                              child: Text('Aún no hay tareas en esta organización'),
+                              child: Text(
+                                'Aún no hay tareas en esta organización',
+                              ),
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              itemCount: tasks.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final Task task = tasks[index];
-
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 8,
+                          : SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildTaskColumn(
+                                    title: 'To do',
+                                    tasks: toDoTasks,
                                   ),
-                                  child: ListTile(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => TaskDetailScreen(task: task),
-                                        ),
-                                      );
-                                    },
-                                    leading: const Icon(Icons.task_alt),
-                                    title: Text(
-                                      task.titulo,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      'Inicio: ${_formatDate(task.fechaInicio)}\nFin: ${_formatDate(task.fechaFin)}',
-                                    ),
-                                    isThreeLine: true,
+                                  _buildTaskColumn(
+                                    title: 'In progress',
+                                    tasks: inProgressTasks,
                                   ),
-                                );
-                              },
+                                  _buildTaskColumn(
+                                    title: 'Completed',
+                                    tasks: completedTasks,
+                                  ),
+                                ],
+                              ),
                             ),
                     ),
                   ],
@@ -250,7 +419,10 @@ class _OrganizationDetailScreenState extends State<OrganizationDetailScreen> {
               SizedBox(width: 10),
               Text(
                 'Crear tarea',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
